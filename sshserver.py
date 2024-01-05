@@ -38,7 +38,7 @@ class QSSHServer():
         # 如果以上两种方式都没有提供值，将使用默认值
         self.ip = kwargs.get('ip', None) or (hasattr(self, 'ip') and self.ip) or '127.0.0.1'
         self.host = "localhost"
-        self.port = (kwargs.get('port', None) and int(kwargs.get('port', None))) or (hasattr(self, 'port') and self.port) or 2222
+        self.port = (kwargs.get('port', None) and int(kwargs.get('port', None))) or (hasattr(self, 'port') and self.port) or 22
         self.username = kwargs.get('username', None) or (hasattr(self, 'username') and self.username) or 'zhz'
         self.password = kwargs.get('password', None) or (hasattr(self, 'password') and self.password) or 'zhz'
         self.ansi = rcompile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]') # 匹配 ANSI 转义序列的正则表达式
