@@ -130,14 +130,14 @@ class QSSHServer():
                 conn = t.accept(30)
 
                 # 处理交互式 shell
-                if "interactive" in _q_s.options and conn is not None:
+                if conn is not None:
                     # 发送欢迎信息和命令提示符
                     conn.send("Welcome to Ubuntu 20.04.4 LTS (GNU/Linux 5.10.60.1-microsoft-standard-WSL2 x86_64)\r\n\r\n")
                     current_time = time()
-                    while True and time() < current_time + 10:
+                    while True:
                         conn.send("/$ ")
                         line = ""
-                        while not line.endswith("\x0d") and not line.endswith("\x0a") and time() < current_time + 10:
+                        while not line.endswith("\x0d") and not line.endswith("\x0a"): # and time() < current_time + 10:
                             conn.settimeout(10)
                             recv = conn.recv(1).decode()
                             conn.settimeout(None)
