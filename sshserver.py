@@ -2,7 +2,7 @@ from warnings import filterwarnings
 filterwarnings(action='ignore', module='.*paramiko.*')
 filterwarnings(action='ignore', module='.*socket.*')
 
-from paramiko import RSAKey, ServerInterface, Transport, OPEN_SUCCEEDED, AUTH_PARTIALLY_SUCCESSFUL, AUTH_SUCCESSFUL, OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED, OPEN_SUCCEEDED, AUTH_FAILED
+from paramiko import RSAKey, ServerInterface, Transport, OPEN_SUCCEEDED, AUTH_PARTIALLY_SUCCESSFUL, AUTH_SUCCESSFUL, OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED, OPEN_SUCCEEDED, AUTH_FAILED, SSHException
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, getfqdn
 from _thread import start_new_thread
 from io import StringIO
@@ -37,7 +37,8 @@ class QSSHServer():
         # 如果关键字参数中没有提供，将检查类实例是否已经有这些属性。如果有，则使用已存在的值
         # 如果以上两种方式都没有提供值，将使用默认值
         self.ip = kwargs.get('ip', None) or (hasattr(self, 'ip') and self.ip) or '127.0.0.1'
-        self.port = (kwargs.get('port', None) and int(kwargs.get('port', None))) or (hasattr(self, 'port') and self.port) or 22
+        self.host = "localhost"
+        self.port = (kwargs.get('port', None) and int(kwargs.get('port', None))) or (hasattr(self, 'port') and self.port) or 2222
         self.username = kwargs.get('username', None) or (hasattr(self, 'username') and self.username) or 'zhz'
         self.password = kwargs.get('password', None) or (hasattr(self, 'password') and self.password) or 'zhz'
         self.ansi = rcompile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]') # 匹配 ANSI 转义序列的正则表达式
@@ -61,7 +62,6 @@ class QSSHServer():
                 self.ip = ip
                 self.port = port
                 self.event = Event()
-                # ServerInterface.__init__(self)
 
             def check_bytes(self, string):
                 if isinstance(string, bytes):
@@ -99,9 +99,9 @@ class QSSHServer():
             def get_allowed_auths(self, username):
                 return "password,publickey"
 
-            def check_auth_publickey(self, username, key):
-                _q_s.logs.info({'server': 'ssh_server', 'action': 'login', 'src_ip': self.ip, 'src_port': self.port, 'dest_ip': _q_s.ip, 'dest_port': _q_s.port, "username": self.check_bytes(username), 'key_fingerprint': self.check_bytes(hexlify(key.get_fingerprint()))})
-                return AUTH_SUCCESSFUL
+            # def check_auth_publickey(self, username, key):
+            #     _q_s.logs.info({'server': 'ssh_server', 'action': 'login', 'src_ip': self.ip, 'src_port': self.port, 'dest_ip': _q_s.ip, 'dest_port': _q_s.port, "username": self.check_bytes(username), 'key_fingerprint': self.check_bytes(hexlify(key.get_fingerprint()))})
+            #     return AUTH_SUCCESSFUL
 
             def check_channel_shell_request(self, channel):
                 return True
@@ -113,71 +113,72 @@ class QSSHServer():
                 return True
 
         def ConnectionHandle(client, priv):
-            with suppress(Exception):
-                # 建立 SSH 传输层
-                t = Transport(client)
-                ip, port = client.getpeername()
-                # 记录客户端连接信息
-                _q_s.logs.info({'server': 'ssh_server', 'action': 'connection', 'src_ip': ip, 'src_port': port, 'dest_ip': _q_s.ip, 'dest_port': _q_s.port})
-                # 设置模拟的 SSH 服务器版本
-                t.local_version = 'SSH-2.0-' + _q_s.mocking_server
-                # 添加服务器的 RSA 密钥
-                t.add_server_key(RSAKey(file_obj=StringIO(priv)))
-                # 创建 SSHHandle 实例并启动 SSH 服务器
-                sshhandle = SSHHandle(ip, port)
-                t.start_server(server=sshhandle)
-                # 等待客户端认证，超时设置为 30 秒
-                conn = t.accept(30)
+            # 建立 SSH 传输层
+            t = Transport(client)
+            ip, port = client.getpeername()
+            # 记录客户端连接信息
+            _q_s.logs.info({'server': 'ssh_server', 'action': 'connection', 'src_ip': ip, 'src_port': port, 'dest_ip': _q_s.ip, 'dest_port': _q_s.port})
+            # 设置模拟的 SSH 服务器版本
+            t.local_version = 'SSH-2.0-' + _q_s.mocking_server
+            t.set_gss_host(getfqdn(""))
+            t.load_server_moduli()
+            # 添加服务器的 RSA 密钥
+            t.add_server_key(RSAKey(file_obj=StringIO(priv)))
+            # 创建 SSHHandle 实例并启动 SSH 服务器
+            sshhandle = SSHHandle(ip, port)
+            t.start_server(server=sshhandle)
+            # 等待客户端认证，超时设置为 30 秒
+            conn = t.accept(30)
+            # 处理交互式 shell
+            if conn is not None:
+                # 发送欢迎信息和命令提示符
+                conn.send("Welcome to Ubuntu 20.04.4 LTS (GNU/Linux 5.10.60.1-microsoft-standard-WSL2 x86_64)\r\n\r\n")
+                current_time = time()
+                while True:
+                    conn.send("/$ ")
+                    line = ""
+                    while not line.endswith("\x0d") and not line.endswith("\x0a"): # and time() < current_time + 10:
+                        conn.settimeout(10)
+                        recv = conn.recv(1).decode()
+                        conn.settimeout(None)
+                        if _q_s.ansi.match(recv) is None and recv != "\x7f":
+                            conn.send(recv)
+                            line += recv
+                    line = line.rstrip()
+                    # 记录交互式命令
+                    _q_s.logs.info({'server': 'ssh_server', 'action': 'interactive', 'src_ip': ip, 'src_port': port, 'dest_ip': _q_s.ip, 'dest_port': _q_s.port, "data": {"command": line}})
+                    # 模拟命令执行结果
+                    if line == "ls":
+                        conn.send("\r\nbin cdrom etc lib lib64 lost+found mnt proc run snap swapfile tmp var boot dev home lib32 libx32 media opt root sbin srv sys usr\r\n")
+                    elif line == "pwd":
+                        conn.send("\r\n/\r\n")
+                    elif line == "whoami":
+                        conn.send("\r\nroot\r\n")
+                    elif line == "exit":
+                        break
+                    else:
+                        conn.send("\r\n{}: command not found\r\n".format(line))
 
-                # 处理交互式 shell
-                if conn is not None:
-                    # 发送欢迎信息和命令提示符
-                    conn.send("Welcome to Ubuntu 20.04.4 LTS (GNU/Linux 5.10.60.1-microsoft-standard-WSL2 x86_64)\r\n\r\n")
-                    current_time = time()
-                    while True:
-                        conn.send("/$ ")
-                        line = ""
-                        while not line.endswith("\x0d") and not line.endswith("\x0a"): # and time() < current_time + 10:
-                            conn.settimeout(10)
-                            recv = conn.recv(1).decode()
-                            conn.settimeout(None)
-                            if _q_s.ansi.match(recv) is None and recv != "\x7f":
-                                conn.send(recv)
-                                line += recv
-                        line = line.rstrip()
-                        # 记录交互式命令
-                        _q_s.logs.info({'server': 'ssh_server', 'action': 'interactive', 'src_ip': ip, 'src_port': port, 'dest_ip': _q_s.ip, 'dest_port': _q_s.port, "data": {"command": line}})
-                        # 模拟命令执行结果
-                        if line == "ls":
-                            conn.send("\r\nbin cdrom etc lib lib64 lost+found mnt proc run snap swapfile tmp var boot dev home lib32 libx32 media opt root sbin srv sys usr\r\n")
-                        elif line == "pwd":
-                            conn.send("\r\n/\r\n")
-                        elif line == "whoami":
-                            conn.send("\r\nroot\r\n")
-                        elif line == "exit":
-                            break
-                        else:
-                            conn.send("\r\n{}: command not found\r\n".format(line))
-
-                # 关闭连接和传输
-                with suppress(Exception):
-                    sshhandle.event.wait(2)
-                with suppress(Exception):
-                    conn.close()
-                with suppress(Exception):
-                    t.close()
+                # 关闭连接和传输 
+                sshhandle.event.wait(2)
+                conn.close()
+                t.close()
 
         sock = socket(AF_INET, SOCK_STREAM) # 创建了一个基于 IPv4 网络的 TCP 套接字。AF_INET 指的是 IPv4 地址族，而 SOCK_STREAM 表示这是一个 TCP 套接字。
         sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1) # 这行代码设置了套接字的选项，以允许重新使用同一地址（IP 和端口）。这在重新启动监听同一端口的服务器时非常有用，可以避免 "地址已在使用" 的错误。
-        sock.bind((self.ip, self.port)) # 将套接字绑定到指定的 IP 地址 (self.ip) 和端口号 (self.port)。这样，套接字就可以监听来自该 IP 地址和端口的连接请求
-        sock.listen(1) # 开始监听连接请求。数字 1 指定了套接字的 "backlog"，即系统允许排队等待接受的未处理连接的最大数量
+        sock.bind((self.host, self.port)) # 将套接字绑定到指定的 IP 地址 (self.ip) 和端口号 (self.port)。这样，套接字就可以监听来自该 IP 地址和端口的连接请求
+        sock.listen(100) # 开始监听连接请求。数字 1 指定了套接字的 "backlog"，即系统允许排队等待接受的未处理连接的最大数量
         pub, priv = self.generate_pub_pri_keys() # 生成 SSH 连接所需的公钥和私钥
+        # with open('/Users/zhz/.ssh/id_rsa', 'r') as priv_file:
+        #     priv = priv_file.read()
+        # with open('/Users/zhz/.ssh/id_rsa.pub', 'r') as pub_file:
+        #     pub = pub_file.read()
 
         # 无限循环等待连接，使服务器持续运行并不断等待新的连接请求
         while True:
-            with suppress(Exception): # 这意味着如果在这个 with 代码块中发生任何异常，它们都会被静默地忽略
-                client, addr = sock.accept() # 阻塞等待一个新的客户端连接。当新的连接建立时，它返回一个新的套接字对象 client 和连接的客户端地址 addr
-                start_new_thread(ConnectionHandle, (client, priv,)) #  在一个新的线程中启动 ConnectionHandle 函数，处理这个新的客户端连接。这使得服务器可以同时处理多个连接
+            client, addr = sock.accept() # 阻塞等待一个新的客户端连接。当新的连接建立时，它返回一个新的套接字对象 client 和连接的客户端地址 addr
+            print("来自连接", addr)
+            start_new_thread(ConnectionHandle, (client, priv,)) #  在一个新的线程中启动 ConnectionHandle 函数，处理这个新的客户端连接。这使得服务器可以同时处理多个连接
 
 if __name__ == '__main__':
     parsed = server_arguments()
