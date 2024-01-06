@@ -8,16 +8,15 @@ from signal import SIGTERM
 from argparse import ArgumentParser
 from socket import socket, AF_INET, SOCK_STREAM
 from json import JSONEncoder, dumps, load
-from logging import Handler, Formatter, DEBUG, getLogger, addLevelName, INFO, Logger
+from logging import Handler, Formatter, DEBUG, getLogger
 from sys import stdout
 from datetime import datetime
 from logging.handlers import RotatingFileHandler, SysLogHandler
 from tempfile import _get_candidate_names, gettempdir
-from os import makedirs, path, scandir, devnull, getuid
+from os import makedirs, path, scandir, devnull
 from psycopg2 import sql
 from psycopg2 import connect as psycopg2_connect
 from time import sleep
-from traceback import format_exc
 from collections.abc import Mapping
 from urllib.parse import urlparse
 from sqlite3 import connect as sqlite3_connect
@@ -26,15 +25,6 @@ from contextlib import suppress
 
 old_stderr = sys.stderr
 sys.stderr = open(devnull, 'w')
-
-def check_privileges():
-    with suppress(Exception):
-        return getuid() == 0
-    with suppress(Exception):
-        import ctypes
-        return ctypes.windll.shell32.IsUserAnAdmin() != 0
-    return False
-
 
 def set_local_vars(self, config):
     with suppress(Exception):
@@ -49,7 +39,6 @@ def set_local_vars(self, config):
                     setattr(self, var, honeypots[honeypot][var])
                     if var == 'port':
                         setattr(self, 'auto_disabled', True)
-
 
 def parse_record(record, custom_filter, type_):
     timestamp = {'timestamp': datetime.utcnow().isoformat()}
