@@ -452,7 +452,7 @@ class sqlite_class():
 def server_arguments():
     _server_parser = ArgumentParser(prog='Server')
     _server_parsergroupdeq = _server_parser.add_argument_group('Initialize Server')
-    _server_parsergroupdeq.add_argument('--ip', type=str, help='Change server ip, current is 0.0.0.0', required=False, metavar='')
+    _server_parsergroupdeq.add_argument('--ip', type=str, help='Change server ip, current is 127.0.0.1', required=False, metavar='')
     _server_parsergroupdeq.add_argument('--port', type=int, help='Change port', required=False, metavar='')
     _server_parsergroupdeq.add_argument('--username', type=str, help='Change username', required=False, metavar='')
     _server_parsergroupdeq.add_argument('--password', type=str, help='Change password', required=False, metavar='')
