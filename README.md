@@ -21,18 +21,18 @@
   - 上图打印出了paramiko的位置，下图打印出了`sudo python3`的搜索路径，可以发现搜索路径中确实不包含paramiko。![image.png](./assets/1704452618490-e572f83e-35b1-4a74-bdc6-36b51e96d4e7.png)
   - 我们需要让`sudo python3`知道paramiko的路径，具体方法如下所示。![image.png](./assets/1704452907891-65f08715-caf5-473b-b1e4-8ef2c7939ca6.png)
 - 由于paramiko的库函数`add_server_key`只支持RSA算法，但是目前的ssh大都使用ED25519算法，所以不能通过读取`.ssh/id_ed25519`*的方法读取系统的私钥来确保和系统的私钥相同，由于现在的ssh会有服务器的指纹认证（即第一次连接到服务器时，客户端会在`.ssh/known_host`中记录服务器的指纹，服务器的指纹是对服务器私钥的SHA256的摘要）来减少中间人攻击或者窃听的发生，也就是说如果服务器的指纹与客户端中记录的第一次的服务器的指纹不相符合，那么就会有类似如下的报错。实验中，我们直接在`.ssh/know_host`中删除对应服务器指纹记录即可，这里可以直接使用`sudo ssh-keygen -R 127.0.0.1[IP]`来删除记录。
-```
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!
-Someone could be eavesdropping on you right now (man-in-the-middle attack)!
-It is also possible that a host key has just been changed.
-The fingerprint for the RSA key sent by the remote host is
-SHA256:/UleaaxRf2e9iflVAPS6TnH3ktvUlVUX6pX0jwnMv5A.
-Please contact your system administrator.
-Add correct host key in /Users/zhz/.ssh/known_hosts to get rid of this message.
-Offending ED25519 key in /Users/zhz/.ssh/known_hosts:8
-Host key for 127.0.0.1 has changed and you have requested strict checking.
-Host key verification failed.
-```
+  ```
+  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  @    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
+  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!
+  Someone could be eavesdropping on you right now (man-in-the-middle attack)!
+  It is also possible that a host key has just been changed.
+  The fingerprint for the RSA key sent by the remote host is
+  SHA256:/UleaaxRf2e9iflVAPS6TnH3ktvUlVUX6pX0jwnMv5A.
+  Please contact your system administrator.
+  Add correct host key in /Users/zhz/.ssh/known_hosts to get rid of this message.
+  Offending ED25519 key in /Users/zhz/.ssh/known_hosts:8
+  Host key for 127.0.0.1 has changed and you have requested strict checking.
+  Host key verification failed.
+  ```
