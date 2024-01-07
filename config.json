@@ -1,0 +1,15 @@
+{
+  "logs": "file, terminal",
+  "logs_location": "./log/",
+  "honeypots": {
+      "http": {
+          "port": 22,
+          "ip": "127.0.0.1",
+          "username": "zhz",
+          "password": "zhz",
+          "log_file_name": "ssh.log",
+          "max_bytes": 10000,
+          "backup_count": 10
+      }
+  }
+}

@@ -1,6 +1,6 @@
 from warnings import filterwarnings
-filterwarnings(action='ignore', module='.*paramiko.*')
-filterwarnings(action='ignore', module='.*socket.*')
+filterwarnings(action='ignore', module='.*paramiko.*') # 忽略 paramiko 模块的警告
+filterwarnings(action='ignore', module='.*socket.*') # 忽略 socket 模块的警告
 
 from paramiko import RSAKey, ServerInterface, Transport, OPEN_SUCCEEDED, AUTH_SUCCESSFUL, OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED, OPEN_SUCCEEDED, AUTH_FAILED
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, getfqdn
@@ -17,8 +17,10 @@ from threading import Event
 
 class QSSHServer():
     def __init__(self, **kwargs):
-        self.mocking_server = choice(['OpenSSH 7.5', 'OpenSSH 7.3', 'Serv-U SSH Server 15.1.1.108', 'OpenSSH 6.4']) # 随机选择一个字符串作为 SSH 服务器的版本，以模拟真实的 SSH 服务器环境
-        self.uuid = 'honeypotslogger' + '_' + __class__.__name__ + '_' + str(uuid4())[:8] # 生成一个唯一标识符，用于日志记录或其他跟踪用途
+        # 随机选择一个字符串作为 SSH 服务器的版本，以模拟真实的 SSH 服务器环境
+        self.mocking_server = choice(['OpenSSH 7.5', 'OpenSSH 7.3', 'Serv-U SSH Server 15.1.1.108', 'OpenSSH 6.4']) 
+        # 生成一个唯一标识符，用于日志记录或其他跟踪用途
+        self.uuid = 'honeypotslogger' + '_' + __class__.__name__ + '_' + str(uuid4())[:8] 
 
         # 获取配置信息
         self.config = kwargs.get('config', '')
@@ -30,11 +32,10 @@ class QSSHServer():
             self.logs = setup_logger(__class__.__name__, self.uuid, None) 
         
         # 设置类的属性
-        # 首先尝试从关键字参数 kwargs 中获取对应的值
-        # 如果关键字参数中没有提供，将检查类实例是否已经有这些属性。如果有，则使用已存在的值
-        # 如果以上两种方式都没有提供值，将使用默认值
+        # - 首先尝试从关键字参数 kwargs 中获取对应的值
+        # - 如果关键字参数中没有提供，将检查类实例是否已经有这些属性。如果有，则使用已存在的值
+        # - 如果以上两种方式都没有提供值，将使用默认值
         self.ip = kwargs.get('ip', None) or (hasattr(self, 'ip') and self.ip) or '127.0.0.1'
-        self.host = "localhost"
         self.port = (kwargs.get('port', None) and int(kwargs.get('port', None))) or (hasattr(self, 'port') and self.port) or 22
         self.username = kwargs.get('username', None) or (hasattr(self, 'username') and self.username) or 'zhz'
         self.password = kwargs.get('password', None) or (hasattr(self, 'password') and self.password) or 'zhz'
@@ -72,7 +73,7 @@ class QSSHServer():
                 return OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
 
             # 处理认证请求
-            # 如果凭据与设置的用户名和密码匹配，则返回 AUTH_SUCCESSFUL，否则返回 AUTH_FAILED
+            # - 如果凭据与设置的用户名和密码匹配，则返回 AUTH_SUCCESSFUL，否则返回 AUTH_FAILED
             def check_auth_password(self, username, password):
                 username = self.check_bytes(username)
                 password = self.check_bytes(password)
@@ -161,10 +162,13 @@ class QSSHServer():
                 conn.close()
                 t.close()
 
-        sock = socket(AF_INET, SOCK_STREAM) # 创建了一个基于 IPv4 网络的 TCP 套接字。AF_INET 指的是 IPv4 地址族，而 SOCK_STREAM 表示这是一个 TCP 套接字。
-        sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1) # 这行代码设置了套接字的选项，以允许重新使用同一地址（IP 和端口）。这在重新启动监听同一端口的服务器时非常有用，可以避免 "地址已在使用" 的错误。
-        sock.bind((self.host, self.port)) # 将套接字绑定到指定的 IP 地址 (self.ip) 和端口号 (self.port)。这样，套接字就可以监听来自该 IP 地址和端口的连接请求
-        sock.listen(100) # 开始监听连接请求。数字 1 指定了套接字的 "backlog"，即系统允许排队等待接受的未处理连接的最大数量
+        # 创建一个套接字对象 sock，用于监听来自客户端的连接请求
+        sock = socket(AF_INET, SOCK_STREAM) # AF_INET 指的是 IPv4 地址族，而 SOCK_STREAM 表示这是一个 TCP 套接字。
+        sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1) # 设置套接字的选项，以允许重新使用同一地址（IP 和端口）
+        sock.bind((self.ip, self.port)) # 将套接字绑定到指定的 IP 地址和端口号
+        sock.listen(1) # 开始监听连接请求，1即系统允许排队等待接受的未处理连接的最大数量
+
+        # 生成 SSH 连接所需服务器的公钥和私钥
         pub, priv = self.generate_pub_pri_keys() # 生成 SSH 连接所需的公钥和私钥
         # with open('/Users/zhz/.ssh/id_rsa', 'r') as priv_file:
         #     priv = priv_file.read()
@@ -173,11 +177,16 @@ class QSSHServer():
 
         # 无限循环等待连接，使服务器持续运行并不断等待新的连接请求
         while True:
-            client, addr = sock.accept() # 阻塞等待一个新的客户端连接。当新的连接建立时，它返回一个新的套接字对象 client 和连接的客户端地址 addr
+            # 阻塞等待一个新的客户端连接，返回一个新的套接字对象 client 和连接的客户端地址 addr
+            client, addr = sock.accept() 
             print("来自连接", addr)
-            start_new_thread(ConnectionHandle, (client, priv,)) #  在一个新的线程中启动 ConnectionHandle 函数，处理这个新的客户端连接。这使得服务器可以同时处理多个连接
+            #  在一个新的线程中启动 ConnectionHandle 函数，处理这个新的客户端连接
+            start_new_thread(ConnectionHandle, (client, priv,))
 
 if __name__ == '__main__':
+    # 解析命令行参数
     parsed = server_arguments()
+    # 创建 SSH 服务器实例
     qsshserver = QSSHServer(ip=parsed.ip, port=parsed.port, username=parsed.username, password=parsed.password, config=parsed.config)
+    # 启动 SSH 服务器
     qsshserver.ssh_server_main()

@@ -1,0 +1,5 @@
+{"action": "connection", "dest_ip": "127.0.0.1", "dest_port": "22", "server": "ssh_server", "src_ip": "127.0.0.1", "src_port": "65181", "timestamp": "2024-01-07T02:44:25.243689"}
+{"action": "login", "dest_ip": "127.0.0.1", "dest_port": "22", "password": "zhz", "server": "ssh_server", "src_ip": "127.0.0.1", "src_port": "65181", "status": "success", "timestamp": "2024-01-07T02:44:29.085895", "username": "zhz"}
+{"action": "interactive", "data": {"command": "ls"}, "dest_ip": "127.0.0.1", "dest_port": "22", "server": "ssh_server", "src_ip": "127.0.0.1", "src_port": "65181", "timestamp": "2024-01-07T02:44:30.090951"}
+{"action": "interactive", "data": {"command": "pwd"}, "dest_ip": "127.0.0.1", "dest_port": "22", "server": "ssh_server", "src_ip": "127.0.0.1", "src_port": "65181", "timestamp": "2024-01-07T02:44:31.692633"}
+{"action": "interactive", "data": {"command": "exit"}, "dest_ip": "127.0.0.1", "dest_port": "22", "server": "ssh_server", "src_ip": "127.0.0.1", "src_port": "65181", "timestamp": "2024-01-07T02:44:33.732437"}
