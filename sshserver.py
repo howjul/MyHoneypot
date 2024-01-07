@@ -11,7 +11,7 @@ from helper import server_arguments, set_local_vars, setup_logger
 from uuid import uuid4
 from contextlib import suppress
 from re import compile as rcompile
-from time import time
+from time import time, strftime, localtime
 from threading import Event
 
 
@@ -130,8 +130,12 @@ class QSSHServer():
             # 处理交互式 shell
             if conn is not None:
                 # 发送欢迎信息和命令提示符
-                conn.send("Welcome to Ubuntu 20.04.4 LTS (GNU/Linux 5.10.60.1-microsoft-standard-WSL2 x86_64)\r\n\r\n")
+                conn.send("Welcome to Ubuntu 22.04.2 LTS (GNU/Linux 6.2.0-39-generic x86_64)\r\n")
                 current_time = time()
+                local_time = localtime(current_time)
+                formatted_time = strftime("%Y-%m-%d %H:%M:%S", local_time)
+                conn.send(formatted_time)
+                conn.send("\r\n")
                 while True:
                     conn.send("/$ ")
                     line = ""
