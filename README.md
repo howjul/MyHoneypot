@@ -9,8 +9,56 @@
 
 
 ## 3. 实现效果
+### 3.1 默认
 
+默认的配置参数为`--ip=127.0.0.1 --port=22 --username=zhz --password=zhz`
 
+```shell
+sudo python3 sshhoneypot.py
+```
+
+![image.png](./assets/1704684435378-5ffa6e6f-cd8d-4cf4-934f-c68750200156.png)
+
+### 3.2 命令行配置参数
+
+```shell
+python3 sshhoneypot.py --ip=127.0.0.1 --port=2222 --username=zju --password=zju
+```
+
+![image.png](./assets/1704684765847-b5c2e443-e5ca-48b7-892f-e6c0b7fbc583.png)
+
+### 3.3 文件配置参数
+
+```shell
+sudo python3 sshhoneypot.py --config='config.json'
+```
+而`config.json`内容为如下所示：
+- `"logs": "file, terminal"`：输出到终端和文件中；
+- `"logs_location": "./log/"`：输出的文件的路径；
+- `"honeypots":{}`：蜜罐的配置参数。
+```json
+{
+  "logs": "file, terminal",
+  "logs_location": "./log/",
+  "honeypots": {
+      "http": {
+          "port": 22,
+          "ip": "127.0.0.1",
+          "username": "zhz",
+          "password": "zhz",
+          "log_file_name": "ssh.log",
+          "max_bytes": 10000,
+          "backup_count": 10
+      }
+  }
+}
+```
+
+![image.png](./assets/1704684872209-1827c032-d949-4e21-b65a-d566b836ab33.png)
+
+如下图所示，可以看到所有操作都在终端和文件中进行了记录。
+
+![image.png](./assets/1704684903293-1d8fe82f-344e-4e8c-940e-a67ef8d8a483.png)
 
 ## 4. 问题解决
 
